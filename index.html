@@ -218,39 +218,52 @@
     const resultBody = document.getElementById("resultBody");
 
     // Dabartiniai rodymo duomenys ir rikiavimo / filtro būsena
-    let currentRows = []; // { name, partyName, votes }
+    let currentRows = []; // { name, partyName, partyCategory, votes }
     let currentSort = { key: "votes", direction: "desc" };
     let currentPartyFilter = "ALL";
 
-    // Partijų spalvos pagal trumpinius
-    const partyColors = {
-      "LSDP":  "#e53935", // ryški raudona
-      "TS-LKD":"#1e3a8a", // tamsi mėlyna
-      "DSVL":  "#0d47a1", // tamsi "navy" mėlyna
-      "LS":    "#fb8c00", // oranžinė
-      "LVŽS":  "#2e7d32", // žalia
-      "NS":    "#b71c1c", // raudona
-      "NA":    "#ff9800", // oranžinė / ruda
-      "PPNA":  "#ff9800"  // tas pats kaip Nemuno aušra
+    // Spalvos pagal normalizuotą kategoriją
+    const categoryColors = {
+      "Tėvynės sąjunga–LKD": "#43BBAE",
+      "Liberalai": "#FDBB38",
+      "Demokratai": "#3A5778",
+      "Socialdemokratai": "#FA0016",
+      "Lietuvos valstiečių, žaliųjų ir KŠS frakcija": "#95D05F",
+      "Mišri grupė": "#868A8D",
+      "Nemuno aušra": "#9A4418"
     };
 
-    function getPartyColor(party) {
-      if (!party) return "#9e9e9e"; // jei nėra – pilka
-      const upper = party.toUpperCase();
-      for (const [abbr, color] of Object.entries(partyColors)) {
-        if (upper.includes(abbr)) {
-          return color;
-        }
+    // Normalizuoja partijos pavadinimą į kategoriją filtrams ir spalvai
+    function getPartyCategory(partyName) {
+      if (!partyName) return "";
+      const p = partyName.toLowerCase();
+
+      if (p.startsWith("mišri grupė")) return "Mišri grupė";
+      if (p.includes("nemuno aušra")) return "Nemuno aušra";
+      if (p.includes("tėvynės sąjunga") || p.includes("tėvynės sajunga") || p.includes("ts-lkd")) {
+        return "Tėvynės sąjunga–LKD";
       }
-      // bandymas pagal raktažodžius, jei nenaudotas trumpinys
-      if (upper.includes("SOCIALDEMOKRAT")) return partyColors["LSDP"];
-      if (upper.includes("KRIKŠČIONYS DEMOKRATAI")) return partyColors["TS-LKD"];
-      if (upper.includes("LIBERALŲ SĄJŪDIS")) return partyColors["LS"];
-      if (upper.includes("VALSTIEČIŲ") || upper.includes("ŽALIŲJŲ")) return partyColors["LVŽS"];
-      if (upper.includes("NEMUNO AUŠRA")) return partyColors["NA"];
-      if (upper.includes("VARDAN LIETUVOS")) return partyColors["DSVL"];
-      if (upper.includes("NACIONALINIS SUSIVIENIJIMAS")) return partyColors["NS"];
-      return "#9e9e9e"; // numatytoji pilka
+      if (p.includes("liberalų sąjūdis") || p.includes("liberalai")) {
+        return "Liberalai";
+      }
+      if (p.includes("demokratų sąjunga") || p.includes("vardan lietuvos") || p.includes("demokratai")) {
+        return "Demokratai";
+      }
+      if (p.includes("socialdemokrat")) {
+        return "Socialdemokratai";
+      }
+      if (p.includes("valstiečių") || p.includes("žaliųjų") || p.includes("žaliuju") || p.includes("kšs")) {
+        return "Lietuvos valstiečių, žaliųjų ir KŠS frakcija";
+      }
+
+      // kitoms partijoms kategorija = pilnas pavadinimas
+      return partyName.trim();
+    }
+
+    // Parenka spalvą pagal kategoriją
+    function getPartyColor(category) {
+      if (!category) return "#9e9e9e";
+      return categoryColors[category] || "#9e9e9e";
     }
 
     // Pagalbinė funkcija: įrašyti ryšį A–B su balsų skaičiumi
@@ -267,26 +280,21 @@
       const mainName = "Dalia Asanavičiūtė-Gružauskienė";
       const oldName  = "Dalia Asanavičiūtė";
 
-      if (!adjacency[oldName]) return; // jei seno vardo nėra – nieko nedarom
+      if (!adjacency[oldName]) return;
 
       if (!adjacency[mainName]) adjacency[mainName] = {};
 
-      // 1) Prie pagrindinio pridedam visus seno vardo balsus
       for (const [other, votes] of Object.entries(adjacency[oldName])) {
         adjacency[mainName][other] = (adjacency[mainName][other] || 0) + votes;
 
-        // 2) Kitiems nariams taip pat pridedam balsus už pagrindinį vardą
         if (!adjacency[other]) adjacency[other] = {};
         adjacency[other][mainName] = (adjacency[other][mainName] || 0) + votes;
 
-        // 3) Pašalinam seną vardą iš kitų narių sąrašų
         delete adjacency[other][oldName];
       }
 
-      // 4) Ištrinam seną vardą iš adjacency
       delete adjacency[oldName];
 
-      // 5) Jei partijos nurodytos tik senam vardui, perkeliame
       if (!memberParty[mainName] && memberParty[oldName]) {
         memberParty[mainName] = memberParty[oldName];
       }
@@ -296,16 +304,13 @@
     // Pilnas nario pašalinimas iš sistemos
     function removeMember(name) {
       if (adjacency[name]) {
-        // pašalinam jį iš kitų narių sąrašų
         for (const [other, neighbors] of Object.entries(adjacency)) {
           if (neighbors[name] !== undefined) {
             delete neighbors[name];
           }
         }
-        // pašalinam jo paties įrašą
         delete adjacency[name];
       }
-      // pašalinam partijos informaciją
       if (memberParty[name]) {
         delete memberParty[name];
       }
@@ -341,14 +346,14 @@
 
     // Sukuria partijų filtro pasirinkimus pagal esamą currentRows
     function buildPartyFilterOptions() {
-      const partiesSet = new Set();
+      const categoriesSet = new Set();
       currentRows.forEach(row => {
-        if (row.partyName && row.partyName.trim()) {
-          partiesSet.add(row.partyName.trim());
+        if (row.partyCategory && row.partyCategory.trim()) {
+          categoriesSet.add(row.partyCategory.trim());
         }
       });
 
-      const parties = Array.from(partiesSet).sort((a, b) => a.localeCompare(b, "lt"));
+      const categories = Array.from(categoriesSet).sort((a, b) => a.localeCompare(b, "lt"));
 
       partyFilterSelect.innerHTML = "";
       const allOpt = document.createElement("option");
@@ -356,10 +361,10 @@
       allOpt.textContent = "Visos partijos";
       partyFilterSelect.appendChild(allOpt);
 
-      parties.forEach(party => {
+      categories.forEach(cat => {
         const opt = document.createElement("option");
-        opt.value = party;
-        opt.textContent = party;
+        opt.value = cat;
+        opt.textContent = cat;
         partyFilterSelect.appendChild(opt);
       });
 
@@ -373,9 +378,9 @@
 
       let rows = currentRows.slice();
 
-      // filtras pagal partiją
+      // filtras pagal partiją (pagal kategoriją)
       if (currentPartyFilter !== "ALL") {
-        rows = rows.filter(row => row.partyName === currentPartyFilter);
+        rows = rows.filter(row => row.partyCategory === currentPartyFilter);
       }
 
       // rikiavimas
@@ -388,7 +393,7 @@
           return a.name.localeCompare(b.name, "lt") * dir;
         }
         if (currentSort.key === "party") {
-          return a.partyName.localeCompare(b.partyName, "lt") * dir;
+          return a.partyCategory.localeCompare(b.partyCategory, "lt") * dir;
         }
         return 0;
       });
@@ -402,7 +407,6 @@
         }
       });
 
-      // užpildom eilutes
       rows.forEach((row, index) => {
         const tr = document.createElement("tr");
 
@@ -415,13 +419,13 @@
         tdName.className = "name-cell";
 
         const partyName = row.partyName || "";
-        const partyColor = getPartyColor(partyName);
+        const partyColor = getPartyColor(row.partyCategory);
 
         const tdParty = document.createElement("td");
         if (partyName) {
           const span = document.createElement("span");
           span.className = "party-badge";
-          span.textContent = partyName;
+          span.textContent = partyName; // rodom pilną tekstą
           span.style.backgroundColor = partyColor;
           tdParty.appendChild(span);
         } else {
@@ -501,7 +505,6 @@
       try {
         const response = await fetch("members_parties.csv");
         if (!response.ok) {
-          // Jei failo nėra – programa vis tiek veiks
           console.warn("Nepavyko nuskaityti „members_parties.csv“. Partijos nebus rodomos.");
           return;
         }
@@ -559,16 +562,14 @@
 
       const partners = adjacency[selected];
       currentRows = Object.entries(partners)
-        .map(([name, votes]) => ({
-          name,
-          partyName: memberParty[name] || "",
-          votes
-        }));
+        .map(([name, votes]) => {
+          const partyName = memberParty[name] || "";
+          const partyCategory = getPartyCategory(partyName);
+          return { name, partyName, partyCategory, votes };
+        });
 
-      // numatytasis rikiavimas – pagal balsų skaičių (nuo didžiausio)
       currentSort = { key: "votes", direction: "desc" };
 
-      // atnaujinam partijos filtrą pagal šiuos duomenis
       buildPartyFilterOptions();
 
       statusEl.textContent =
@@ -590,10 +591,8 @@
         if (!key) return;
 
         if (currentSort.key === key) {
-          // jei spaudžiam tą patį stulpelį – keičiam kryptį
           currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
         } else {
-          // naujas stulpelis – numatytas rikiavimas
           currentSort.key = key;
           currentSort.direction = key === "votes" ? "desc" : "asc";
         }
@@ -609,13 +608,8 @@
         loadParties()
       ]);
 
-      // sujungiame Dalių duomenis
       mergeDaliaData();
-
-      // pašaliname Liudą Mažylį iš sistemos
       removeMember("Liudas Mažylis");
-
-      // sukuriame pasirinkimų sąrašą
       buildMemberSelect();
     })();
   </script>
