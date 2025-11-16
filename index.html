@@ -114,6 +114,65 @@
       adjacency[a][b] = current + votes;
     }
 
+    // Sujungimas: "Dalia Asanavičiūtė" → "Dalia Asanavičiūtė-Gružauskienė"
+    function mergeDaliaData() {
+      const mainName = "Dalia Asanavičiūtė-Gružauskienė";
+      const oldName  = "Dalia Asanavičiūtė";
+
+      if (!adjacency[oldName]) return; // jei seno vardo nėra – nieko nedarom
+
+      if (!adjacency[mainName]) adjacency[mainName] = {};
+
+      // 1) Prie pagrindinio pridedam visus seno vardo balsus
+      for (const [other, votes] of Object.entries(adjacency[oldName])) {
+        adjacency[mainName][other] = (adjacency[mainName][other] || 0) + votes;
+
+        // 2) Kitiems nariams taip pat pridedam balsus už pagrindinį vardą
+        if (!adjacency[other]) adjacency[other] = {};
+        adjacency[other][mainName] = (adjacency[other][mainName] || 0) + votes;
+
+        // 3) Pašalinam seną vardą iš kitų narių sąrašų
+        delete adjacency[other][oldName];
+      }
+
+      // 4) Ištrinam seną vardą iš adjacency
+      delete adjacency[oldName];
+
+      // 5) Jei partijos nurodytos tik senam vardui, perkeliame
+      if (!memberParty[mainName] && memberParty[oldName]) {
+        memberParty[mainName] = memberParty[oldName];
+      }
+      delete memberParty[oldName];
+    }
+
+    // Užpildo <select> pagal adjacency
+    function buildMemberSelect() {
+      const members = Object.keys(adjacency).sort((a, b) => a.localeCompare(b, "lt"));
+
+      memberSelect.innerHTML = "";
+      memberSelect.disabled = members.length === 0;
+
+      if (members.length === 0) {
+        statusEl.textContent = "Nerasta nė vieno nario po duomenų apdorojimo.";
+        return;
+      }
+
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "— Pasirink nario vardą ir pavardę —";
+      memberSelect.appendChild(defaultOption);
+
+      for (const m of members) {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        memberSelect.appendChild(opt);
+      }
+
+      statusEl.textContent = "Duomenys įkelti. Pasirink nario vardą ir pavardę.";
+      errorEl.style.display = "none";
+    }
+
     // CSV nuskaitymas ir suparsavimas – balsavimų panašumas
     async function loadCommonVotes() {
       try {
@@ -159,29 +218,7 @@
           addPair(m2, m1, votes);
         }
 
-        // Užpildome select su unikaliomis pavardėmis
-        const members = Object.keys(adjacency).sort((a, b) => a.localeCompare(b, "lt"));
-        memberSelect.innerHTML = "";
-        memberSelect.disabled = members.length === 0;
-
-        if (members.length === 0) {
-          throw new Error("Nerasta nė vieno nario po „common_votes.csv“ apdorojimo.");
-        }
-
-        const defaultOption = document.createElement("option");
-        defaultOption.value = "";
-        defaultOption.textContent = "— Pasirink nario vardą ir pavardę —";
-        memberSelect.appendChild(defaultOption);
-
-        for (const m of members) {
-          const opt = document.createElement("option");
-          opt.value = m;
-          opt.textContent = m;
-          memberSelect.appendChild(opt);
-        }
-
-        statusEl.textContent = "Duomenys įkelti. Pasirink nario vardą ir pavardę.";
-        errorEl.style.display = "none";
+        statusEl.textContent = "Balsavimų duomenys įkelti, tvarkome sąrašą...";
 
       } catch (err) {
         console.error(err);
@@ -196,7 +233,7 @@
       try {
         const response = await fetch("members_parties.csv");
         if (!response.ok) {
-          // Jei failo nėra – tiesiog tyliai praleidžiam (programa vis tiek veiks)
+          // Jei failo nėra – programa vis tiek veiks
           console.warn("Nepavyko nuskaityti „members_parties.csv“. Partijos nebus rodomos.");
           return;
         }
@@ -285,12 +322,18 @@
       });
     });
 
-    // Inicijuojame – krauname abu CSV
+    // Inicijuojame – krauname abu CSV, po to sujungiame Dalią ir atnaujiname select
     (async function init() {
       await Promise.all([
         loadCommonVotes(),
         loadParties()
       ]);
+
+      // Sujungiame Dalių duomenis
+      mergeDaliaData();
+
+      // Sukuriame pasirinkimų sąrašą
+      buildMemberSelect();
     })();
   </script>
 </body>
