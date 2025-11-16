@@ -2,7 +2,7 @@
 <html lang="lt">
 <head>
   <meta charset="UTF-8" />
-  <title>Balsavimų panašumas</title>
+  <title>Seimo narių balsavimo panašumų ir skirtumų analizė</title>
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -177,9 +177,9 @@
   </style>
 </head>
 <body>
-  <h1>Balsavimų panašumas</h1>
+  <h1>Seimo narių balsavimo panašumų ir skirtumų analizė</h1>
   <div class="subtitle">
-    Pasirink Seimo narį ir pamatyk, su kuo dažniausiai balsavo vienodai (pagal bendrų balsavimų skaičių).
+    Pasirinkite Seimo narį ir pamatysite, su kuo jis balsuoja panašiausiai ir su kuo – labiausiai skirtingai (pagal bendrų balsavimų skaičių).
   </div>
 
   <div class="source-note">
@@ -574,7 +574,7 @@
       buildPartyFilterOptions();
 
       statusEl.textContent =
-        "Rodomi nariai, su kuriais „" + selected + "“ dažniausiai balsavo vienodai (nuo didžiausio iki mažiausio bendrų balsų skaičiaus).";
+        "Rodomi nariai, su kuriais „" + selected + "“ dažniausiai balsuoja panašiai arba skirtingai (rikiuojant pagal bendrų balsavimų skaičių).";
 
       renderRows();
     });
