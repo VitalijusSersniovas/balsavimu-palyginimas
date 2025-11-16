@@ -63,6 +63,16 @@
       font-weight: 600;
       margin-top: 10px;
     }
+    .party-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      color: #fff;
+      font-weight: 600;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -104,6 +114,37 @@
     const statusEl = document.getElementById("status");
     const errorEl = document.getElementById("error");
     const resultBody = document.getElementById("resultBody");
+
+    // Partijų spalvos pagal trumpinius
+    const partyColors = {
+      "LSDP":  "#e53935", // ryški raudona
+      "TS-LKD":"#1e3a8a", // tamsi mėlyna
+      "DSVL":  "#0d47a1", // tamsi "navy" mėlyna
+      "LS":    "#fb8c00", // oranžinė
+      "LVŽS":  "#2e7d32", // žalia
+      "NS":    "#b71c1c", // raudona
+      "NA":    "#ff9800", // oranžinė / ruda
+      "PPNA":  "#ff9800"  // tas pats kaip Nemuno aušra
+    };
+
+    function getPartyColor(party) {
+      if (!party) return "#9e9e9e"; // jei nėra – pilka
+      const upper = party.toUpperCase();
+      for (const [abbr, color] of Object.entries(partyColors)) {
+        if (upper.includes(abbr)) {
+          return color;
+        }
+      }
+      // bandymas pagal raktažodžius, jei nenaudotas trumpinys
+      if (upper.includes("SOCIALDEMOKRAT")) return partyColors["LSDP"];
+      if (upper.includes("KRIKŠČIONYS DEMOKRATAI")) return partyColors["TS-LKD"];
+      if (upper.includes("LIBERALŲ SĄJŪDIS")) return partyColors["LS"];
+      if (upper.includes("VALSTIEČIŲ") || upper.includes("ŽALIŲJŲ")) return partyColors["LVŽS"];
+      if (upper.includes("NEMUNO AUŠRA")) return partyColors["NA"];
+      if (upper.includes("VARDAN LIETUVOS")) return partyColors["DSVL"];
+      if (upper.includes("NACIONALINIS SUSIVIENIJIMAS")) return partyColors["NS"];
+      return "#9e9e9e"; // numatytoji pilka
+    }
 
     // Pagalbinė funkcija: įrašyti ryšį A–B su balsų skaičiumi
     function addPair(a, b, votes) {
@@ -324,8 +365,19 @@
         tdName.textContent = row.name;
         tdName.className = "name-cell";
 
+        const partyName = memberParty[row.name] || "";
+        const partyColor = getPartyColor(partyName);
+
         const tdParty = document.createElement("td");
-        tdParty.textContent = memberParty[row.name] || "";
+        if (partyName) {
+          const span = document.createElement("span");
+          span.className = "party-badge";
+          span.textContent = partyName;
+          span.style.backgroundColor = partyColor;
+          tdParty.appendChild(span);
+        } else {
+          tdParty.textContent = "";
+        }
         tdParty.className = "party-cell";
 
         const tdVotes = document.createElement("td");
