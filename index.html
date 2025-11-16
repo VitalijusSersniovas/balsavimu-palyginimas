@@ -33,7 +33,7 @@
     table {
       border-collapse: collapse;
       width: 100%;
-      max-width: 900px;
+      max-width: 1000px;
       margin-top: 10px;
     }
     th, td {
@@ -53,6 +53,9 @@
       white-space: nowrap;
     }
     .name-cell {
+      white-space: nowrap;
+    }
+    .party-cell {
       white-space: nowrap;
     }
     .error {
@@ -83,6 +86,7 @@
       <tr>
         <th>#</th>
         <th>Vardas, pavardė</th>
+        <th>Partija / frakcija</th>
         <th>Bendri balsavimai</th>
       </tr>
     </thead>
@@ -93,7 +97,9 @@
 
   <script>
     // Globalūs kintamieji
-    const adjacency = {}; // { member: { otherMember: commonVotes, ... }, ... }
+    const adjacency = {};   // { member: { otherMember: commonVotes, ... }, ... }
+    const memberParty = {}; // { member: partyName }
+
     const memberSelect = document.getElementById("memberSelect");
     const statusEl = document.getElementById("status");
     const errorEl = document.getElementById("error");
@@ -105,12 +111,11 @@
         adjacency[a] = {};
       }
       const current = adjacency[a][b] || 0;
-      // Jei būtų dublikatų – sumuojam; jei nebus – tiesiog nustatom
       adjacency[a][b] = current + votes;
     }
 
-    // CSV nuskaitymas ir suparsavimas
-    async function loadCSV() {
+    // CSV nuskaitymas ir suparsavimas – balsavimų panašumas
+    async function loadCommonVotes() {
       try {
         const response = await fetch("common_votes.csv");
         if (!response.ok) {
@@ -118,14 +123,11 @@
         }
 
         const text = await response.text();
-
-        // Paimam eilutes
         const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
         if (lines.length < 2) {
-          throw new Error("CSV faile per mažai eilučių.");
+          throw new Error("„common_votes.csv“ faile per mažai eilučių.");
         }
 
-        // Pirmoje eilutėje – antraštės
         const headerLine = lines[0];
         const delimiter = headerLine.includes(";") ? ";" : ",";
 
@@ -135,10 +137,9 @@
         const idxCommon = headers.indexOf("common_votes");
 
         if (idxMember1 === -1 || idxMember2 === -1 || idxCommon === -1) {
-          throw new Error("CSV antraštėje turi būti stulpeliai: member1, member2, common_votes.");
+          throw new Error("„common_votes.csv“ antraštėje turi būti stulpeliai: member1, member2, common_votes.");
         }
 
-        // Einame per visas duomenų eilutes
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
           if (!line.trim()) continue;
@@ -154,7 +155,6 @@
           const votes = Number(votesStr.replace(",", "."));
           if (!Number.isFinite(votes)) continue;
 
-          // Abu kryptim – kad iškart turėtume ir A→B, ir B→A
           addPair(m1, m2, votes);
           addPair(m2, m1, votes);
         }
@@ -165,10 +165,9 @@
         memberSelect.disabled = members.length === 0;
 
         if (members.length === 0) {
-          throw new Error("Nerasta nė vieno nario po CSV apdorojimo.");
+          throw new Error("Nerasta nė vieno nario po „common_votes.csv“ apdorojimo.");
         }
 
-        // Pridedam tuščią „pasirink“ opciją
         const defaultOption = document.createElement("option");
         defaultOption.value = "";
         defaultOption.textContent = "— Pasirink nario vardą ir pavardę —";
@@ -189,6 +188,53 @@
         statusEl.textContent = "";
         errorEl.textContent = err.message;
         errorEl.style.display = "block";
+      }
+    }
+
+    // CSV su partijomis: members_parties.csv (member, party)
+    async function loadParties() {
+      try {
+        const response = await fetch("members_parties.csv");
+        if (!response.ok) {
+          // Jei failo nėra – tiesiog tyliai praleidžiam (programa vis tiek veiks)
+          console.warn("Nepavyko nuskaityti „members_parties.csv“. Partijos nebus rodomos.");
+          return;
+        }
+
+        const text = await response.text();
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        if (lines.length < 2) {
+          console.warn("„members_parties.csv“ faile per mažai eilučių.");
+          return;
+        }
+
+        const headerLine = lines[0];
+        const delimiter = headerLine.includes(";") ? ";" : ",";
+        const headers = headerLine.split(delimiter).map(h => h.trim());
+
+        const idxMember = headers.indexOf("member");
+        const idxParty  = headers.indexOf("party");
+
+        if (idxMember === -1 || idxParty === -1) {
+          console.warn("„members_parties.csv“ antraštėje turi būti stulpeliai: member, party.");
+          return;
+        }
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line.trim()) continue;
+          const cols = line.split(delimiter);
+          if (cols.length <= Math.max(idxMember, idxParty)) continue;
+
+          const member = cols[idxMember].trim();
+          const party  = cols[idxParty].trim();
+          if (!member) continue;
+
+          memberParty[member] = party;
+        }
+
+      } catch (err) {
+        console.error("Klaida skaitant „members_parties.csv“:", err);
       }
     }
 
@@ -223,19 +269,29 @@
         tdName.textContent = row.name;
         tdName.className = "name-cell";
 
+        const tdParty = document.createElement("td");
+        tdParty.textContent = memberParty[row.name] || "";
+        tdParty.className = "party-cell";
+
         const tdVotes = document.createElement("td");
         tdVotes.textContent = row.votes;
         tdVotes.className = "number-cell";
 
         tr.appendChild(tdIndex);
         tr.appendChild(tdName);
+        tr.appendChild(tdParty);
         tr.appendChild(tdVotes);
         resultBody.appendChild(tr);
       });
     });
 
-    // Paleidžiam užkrovimą
-    loadCSV();
+    // Inicijuojame – krauname abu CSV
+    (async function init() {
+      await Promise.all([
+        loadCommonVotes(),
+        loadParties()
+      ]);
+    })();
   </script>
 </body>
 </html>
