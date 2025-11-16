@@ -145,6 +145,24 @@
       delete memberParty[oldName];
     }
 
+    // Pilnas nario pašalinimas iš sistemos
+    function removeMember(name) {
+      if (adjacency[name]) {
+        // pašalinam jį iš kitų narių sąrašų
+        for (const [other, neighbors] of Object.entries(adjacency)) {
+          if (neighbors[name] !== undefined) {
+            delete neighbors[name];
+          }
+        }
+        // pašalinam jo paties įrašą
+        delete adjacency[name];
+      }
+      // pašalinam partijos informaciją
+      if (memberParty[name]) {
+        delete memberParty[name];
+      }
+    }
+
     // Užpildo <select> pagal adjacency
     function buildMemberSelect() {
       const members = Object.keys(adjacency).sort((a, b) => a.localeCompare(b, "lt"));
@@ -322,7 +340,7 @@
       });
     });
 
-    // Inicijuojame – krauname abu CSV, po to sujungiame Dalią ir atnaujiname select
+    // Inicijuojame – krauname abu CSV, po to tvarkome specialius atvejus
     (async function init() {
       await Promise.all([
         loadCommonVotes(),
@@ -331,6 +349,9 @@
 
       // Sujungiame Dalių duomenis
       mergeDaliaData();
+
+      // Pašaliname Liudą Mažylį iš sistemos
+      removeMember("Liudas Mažylis");
 
       // Sukuriame pasirinkimų sąrašą
       buildMemberSelect();
