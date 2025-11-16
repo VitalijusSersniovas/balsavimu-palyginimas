@@ -60,12 +60,12 @@
 
     .table-wrapper {
       max-width: 100%;
-      overflow-x: auto;      /* horizontalus scroll mažiems ekranams */
+      overflow-x: auto;
     }
 
     .table-container {
       max-height: 75vh;
-      overflow-y: auto;      /* vertikalus scroll su sticky header */
+      overflow-y: auto;
       border: 1px solid #ddd;
       border-radius: 4px;
     }
@@ -238,20 +238,33 @@
       if (!partyName) return "";
       const p = partyName.toLowerCase();
 
+      // Mišri grupė – VISI variantai, kur prasideda "Mišri grupė"
       if (p.startsWith("mišri grupė")) return "Mišri grupė";
+
+      // Nemuno aušra
       if (p.includes("nemuno aušra")) return "Nemuno aušra";
+
+      // Tėvynės sąjunga – LKD
       if (p.includes("tėvynės sąjunga") || p.includes("tėvynės sajunga") || p.includes("ts-lkd")) {
         return "Tėvynės sąjunga–LKD";
       }
+
+      // Liberalai
       if (p.includes("liberalų sąjūdis") || p.includes("liberalai")) {
         return "Liberalai";
       }
-      if (p.includes("demokratų sąjunga") || p.includes("vardan lietuvos") || p.includes("demokratai")) {
-        return "Demokratai";
-      }
+
+      // Socialdemokratai – atskira kategorija
       if (p.includes("socialdemokrat")) {
         return "Socialdemokratai";
       }
+
+      // Demokratų sąjunga „Vardan Lietuvos“ – be bendro "demokratai"
+      if (p.includes("demokratų sąjunga") || p.includes("vardan lietuvos")) {
+        return "Demokratai";
+      }
+
+      // LVŽS ir KŠS frakcija
       if (p.includes("valstiečių") || p.includes("žaliųjų") || p.includes("žaliuju") || p.includes("kšs")) {
         return "Lietuvos valstiečių, žaliųjų ir KŠS frakcija";
       }
@@ -378,12 +391,10 @@
 
       let rows = currentRows.slice();
 
-      // filtras pagal partiją (pagal kategoriją)
       if (currentPartyFilter !== "ALL") {
         rows = rows.filter(row => row.partyCategory === currentPartyFilter);
       }
 
-      // rikiavimas
       rows.sort((a, b) => {
         const dir = currentSort.direction === "asc" ? 1 : -1;
         if (currentSort.key === "votes") {
@@ -398,7 +409,6 @@
         return 0;
       });
 
-      // atnaujinam header klases
       document.querySelectorAll("th.sortable").forEach(th => {
         th.classList.remove("sorted-asc", "sorted-desc");
         const key = th.getAttribute("data-sort-key");
@@ -425,7 +435,7 @@
         if (partyName) {
           const span = document.createElement("span");
           span.className = "party-badge";
-          span.textContent = partyName; // rodom pilną tekstą
+          span.textContent = partyName;
           span.style.backgroundColor = partyColor;
           tdParty.appendChild(span);
         } else {
