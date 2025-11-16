@@ -7,71 +7,159 @@
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 20px;
+      font-size: 1.05rem;
     }
+
     h1 {
-      font-size: 1.6rem;
-      margin-bottom: 0.2rem;
+      font-size: 1.8rem;
+      margin-bottom: 0.3rem;
     }
+
     .subtitle {
-      font-size: 0.9rem;
+      font-size: 1rem;
       color: #555;
       margin-bottom: 1rem;
     }
+
     label {
       font-weight: 600;
     }
+
     select {
-      min-width: 320px;
-      padding: 6px 8px;
-      margin: 6px 0 14px 0;
+      min-width: 350px;
+      padding: 6px 10px;
+      font-size: 1rem;
+      margin: 6px 0 10px 0;
     }
+
     .status {
-      font-size: 0.9rem;
+      margin-top: 6px;
+      margin-bottom: 8px;
+      font-size: 1rem;
       color: #555;
-      margin-bottom: 0.5rem;
     }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      max-width: 1000px;
-      margin-top: 10px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 6px 8px;
-      font-size: 0.9rem;
-    }
-    th {
-      background: #f3f3f3;
-      text-align: left;
-    }
-    tr:nth-child(even) {
-      background: #fafafa;
-    }
-    .number-cell {
-      text-align: right;
-      white-space: nowrap;
-    }
-    .name-cell {
-      white-space: nowrap;
-    }
-    .party-cell {
-      white-space: nowrap;
-    }
+
     .error {
       color: #b00020;
       font-weight: 600;
       margin-top: 10px;
     }
+
+    .filters-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .filters-row > div {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-wrapper {
+      max-width: 100%;
+      overflow-x: auto;      /* horizontalus scroll mažiems ekranams */
+    }
+
+    .table-container {
+      max-height: 75vh;
+      overflow-y: auto;      /* vertikalus scroll su sticky header */
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 650px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #e0e0e0;
+      padding: 4px 8px;
+      font-size: 1.05rem;
+      line-height: 1.25;
+    }
+
+    th {
+      background: #f6f6f6;
+      text-align: left;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+
+    .number-cell {
+      text-align: right;
+      white-space: nowrap;
+      width: 60px;
+    }
+
+    .name-cell {
+      white-space: nowrap;
+      width: 260px;
+    }
+
+    .party-cell {
+      white-space: nowrap;
+      width: 240px;
+    }
+
     .party-badge {
       display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.8rem;
-      color: #fff;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.95rem;
       font-weight: 600;
-      line-height: 1.4;
+      color: #fff;
       white-space: nowrap;
+    }
+
+    .sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .sortable::after {
+      content: " ⇅";
+      font-size: 0.8rem;
+      color: #999;
+    }
+
+    .sortable.sorted-asc::after {
+      content: " ↑";
+      color: #555;
+    }
+
+    .sortable.sorted-desc::after {
+      content: " ↓";
+      color: #555;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        margin: 10px;
+        font-size: 1rem;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      .subtitle {
+        font-size: 0.95rem;
+      }
+      select {
+        min-width: 260px;
+      }
+      table {
+        min-width: 600px;
+      }
     }
   </style>
 </head>
@@ -81,29 +169,42 @@
     Pasirink Seimo narį ir pamatyk, su kuo dažniausiai balsavo vienodai (pagal bendrų balsavimų skaičių).
   </div>
 
-  <div>
-    <label for="memberSelect">Pasirink vardą ir pavardę:</label><br />
-    <select id="memberSelect" disabled>
-      <option>Įkeliami duomenys...</option>
-    </select>
+  <div class="filters-row">
+    <div>
+      <label for="memberSelect">Pasirink vardą ir pavardę:</label>
+      <select id="memberSelect" disabled>
+        <option>Įkeliami duomenys...</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="partyFilter">Filtruoti pagal partiją / frakciją:</label>
+      <select id="partyFilter" disabled>
+        <option value="ALL">Visos partijos</option>
+      </select>
+    </div>
   </div>
 
   <div id="status" class="status">Bandome įkelti duomenis iš „common_votes.csv“...</div>
   <div id="error" class="error" style="display:none;"></div>
 
-  <table id="resultTable">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Vardas, pavardė</th>
-        <th>Partija / frakcija</th>
-        <th>Bendri balsavimai</th>
-      </tr>
-    </thead>
-    <tbody id="resultBody">
-      <!-- Rezultatai bus pildomi čia -->
-    </tbody>
-  </table>
+  <div class="table-wrapper">
+    <div class="table-container">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="sortable" data-sort-key="name">Vardas, pavardė</th>
+            <th class="sortable" data-sort-key="party">Partija / frakcija</th>
+            <th class="sortable" data-sort-key="votes">Bendri balsavimai</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody">
+          <!-- Rezultatai bus pildomi čia -->
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <script>
     // Globalūs kintamieji
@@ -111,9 +212,15 @@
     const memberParty = {}; // { member: partyName }
 
     const memberSelect = document.getElementById("memberSelect");
+    const partyFilterSelect = document.getElementById("partyFilter");
     const statusEl = document.getElementById("status");
     const errorEl = document.getElementById("error");
     const resultBody = document.getElementById("resultBody");
+
+    // Dabartiniai rodymo duomenys ir rikiavimo / filtro būsena
+    let currentRows = []; // { name, partyName, votes }
+    let currentSort = { key: "votes", direction: "desc" };
+    let currentPartyFilter = "ALL";
 
     // Partijų spalvos pagal trumpinius
     const partyColors = {
@@ -232,6 +339,108 @@
       errorEl.style.display = "none";
     }
 
+    // Sukuria partijų filtro pasirinkimus pagal esamą currentRows
+    function buildPartyFilterOptions() {
+      const partiesSet = new Set();
+      currentRows.forEach(row => {
+        if (row.partyName && row.partyName.trim()) {
+          partiesSet.add(row.partyName.trim());
+        }
+      });
+
+      const parties = Array.from(partiesSet).sort((a, b) => a.localeCompare(b, "lt"));
+
+      partyFilterSelect.innerHTML = "";
+      const allOpt = document.createElement("option");
+      allOpt.value = "ALL";
+      allOpt.textContent = "Visos partijos";
+      partyFilterSelect.appendChild(allOpt);
+
+      parties.forEach(party => {
+        const opt = document.createElement("option");
+        opt.value = party;
+        opt.textContent = party;
+        partyFilterSelect.appendChild(opt);
+      });
+
+      partyFilterSelect.disabled = false;
+      currentPartyFilter = "ALL";
+    }
+
+    // Pritaiko rikiavimą ir filtrą, ir perpiešia lentelę
+    function renderRows() {
+      resultBody.innerHTML = "";
+
+      let rows = currentRows.slice();
+
+      // filtras pagal partiją
+      if (currentPartyFilter !== "ALL") {
+        rows = rows.filter(row => row.partyName === currentPartyFilter);
+      }
+
+      // rikiavimas
+      rows.sort((a, b) => {
+        const dir = currentSort.direction === "asc" ? 1 : -1;
+        if (currentSort.key === "votes") {
+          return (a.votes - b.votes) * dir;
+        }
+        if (currentSort.key === "name") {
+          return a.name.localeCompare(b.name, "lt") * dir;
+        }
+        if (currentSort.key === "party") {
+          return a.partyName.localeCompare(b.partyName, "lt") * dir;
+        }
+        return 0;
+      });
+
+      // atnaujinam header klases
+      document.querySelectorAll("th.sortable").forEach(th => {
+        th.classList.remove("sorted-asc", "sorted-desc");
+        const key = th.getAttribute("data-sort-key");
+        if (key === currentSort.key) {
+          th.classList.add(currentSort.direction === "asc" ? "sorted-asc" : "sorted-desc");
+        }
+      });
+
+      // užpildom eilutes
+      rows.forEach((row, index) => {
+        const tr = document.createElement("tr");
+
+        const tdIndex = document.createElement("td");
+        tdIndex.textContent = index + 1;
+        tdIndex.className = "number-cell";
+
+        const tdName = document.createElement("td");
+        tdName.textContent = row.name;
+        tdName.className = "name-cell";
+
+        const partyName = row.partyName || "";
+        const partyColor = getPartyColor(partyName);
+
+        const tdParty = document.createElement("td");
+        if (partyName) {
+          const span = document.createElement("span");
+          span.className = "party-badge";
+          span.textContent = partyName;
+          span.style.backgroundColor = partyColor;
+          tdParty.appendChild(span);
+        } else {
+          tdParty.textContent = "";
+        }
+        tdParty.className = "party-cell";
+
+        const tdVotes = document.createElement("td");
+        tdVotes.textContent = row.votes;
+        tdVotes.className = "number-cell";
+
+        tr.appendChild(tdIndex);
+        tr.appendChild(tdName);
+        tr.appendChild(tdParty);
+        tr.appendChild(tdVotes);
+        resultBody.appendChild(tr);
+      });
+    }
+
     // CSV nuskaitymas ir suparsavimas – balsavimų panašumas
     async function loadCommonVotes() {
       try {
@@ -334,7 +543,7 @@
       }
     }
 
-    // Kai pasirenkamas narys
+    // Vartotojas pasirenka konkretų narį
     memberSelect.addEventListener("change", () => {
       const selected = memberSelect.value;
       resultBody.innerHTML = "";
@@ -343,52 +552,53 @@
         statusEl.textContent = selected
           ? "Šiam nariui nerasta sutapimų."
           : "Pasirink nario vardą ir pavardę.";
+        currentRows = [];
+        renderRows();
         return;
       }
 
       const partners = adjacency[selected];
-      const rows = Object.entries(partners)
-        .map(([name, votes]) => ({ name, votes }))
-        .sort((a, b) => b.votes - a.votes); // nuo daugiausiai iki mažiausiai
+      currentRows = Object.entries(partners)
+        .map(([name, votes]) => ({
+          name,
+          partyName: memberParty[name] || "",
+          votes
+        }));
+
+      // numatytasis rikiavimas – pagal balsų skaičių (nuo didžiausio)
+      currentSort = { key: "votes", direction: "desc" };
+
+      // atnaujinam partijos filtrą pagal šiuos duomenis
+      buildPartyFilterOptions();
 
       statusEl.textContent =
         "Rodomi nariai, su kuriais „" + selected + "“ dažniausiai balsavo vienodai (nuo didžiausio iki mažiausio bendrų balsų skaičiaus).";
 
-      rows.forEach((row, index) => {
-        const tr = document.createElement("tr");
+      renderRows();
+    });
 
-        const tdIndex = document.createElement("td");
-        tdIndex.textContent = index + 1;
-        tdIndex.className = "number-cell";
+    // Partijos filtro keitimas
+    partyFilterSelect.addEventListener("change", () => {
+      currentPartyFilter = partyFilterSelect.value || "ALL";
+      renderRows();
+    });
 
-        const tdName = document.createElement("td");
-        tdName.textContent = row.name;
-        tdName.className = "name-cell";
+    // Rikiavimas paspaudus ant stulpelio antraštės
+    document.querySelectorAll("th.sortable").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.getAttribute("data-sort-key");
+        if (!key) return;
 
-        const partyName = memberParty[row.name] || "";
-        const partyColor = getPartyColor(partyName);
-
-        const tdParty = document.createElement("td");
-        if (partyName) {
-          const span = document.createElement("span");
-          span.className = "party-badge";
-          span.textContent = partyName;
-          span.style.backgroundColor = partyColor;
-          tdParty.appendChild(span);
+        if (currentSort.key === key) {
+          // jei spaudžiam tą patį stulpelį – keičiam kryptį
+          currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
         } else {
-          tdParty.textContent = "";
+          // naujas stulpelis – numatytas rikiavimas
+          currentSort.key = key;
+          currentSort.direction = key === "votes" ? "desc" : "asc";
         }
-        tdParty.className = "party-cell";
 
-        const tdVotes = document.createElement("td");
-        tdVotes.textContent = row.votes;
-        tdVotes.className = "number-cell";
-
-        tr.appendChild(tdIndex);
-        tr.appendChild(tdName);
-        tr.appendChild(tdParty);
-        tr.appendChild(tdVotes);
-        resultBody.appendChild(tr);
+        renderRows();
       });
     });
 
@@ -399,13 +609,13 @@
         loadParties()
       ]);
 
-      // Sujungiame Dalių duomenis
+      // sujungiame Dalių duomenis
       mergeDaliaData();
 
-      // Pašaliname Liudą Mažylį iš sistemos
+      // pašaliname Liudą Mažylį iš sistemos
       removeMember("Liudas Mažylis");
 
-      // Sukuriame pasirinkimų sąrašą
+      // sukuriame pasirinkimų sąrašą
       buildMemberSelect();
     })();
   </script>
