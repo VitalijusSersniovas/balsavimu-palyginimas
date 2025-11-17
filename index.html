@@ -163,31 +163,6 @@
       font-style: italic;
     }
 
-    /* Naujas blokas su partijų procentais */
-    .party-stats {
-      margin-top: 10px;
-      margin-bottom: 8px;
-      font-size: 0.97rem;
-      color: #444;
-    }
-
-    .party-stats-title {
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .party-stats-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 10px;
-    }
-
-    .party-stats-item {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
     @media (max-width: 768px) {
       body {
         margin: 10px;
@@ -238,9 +213,6 @@
     </div>
   </div>
 
-  <!-- Naujas informacinis blokas su partijų procentais -->
-  <div id="partyStats" class="party-stats"></div>
-
   <div id="status" class="status">Bandome įkelti duomenis iš „common_votes.csv“...</div>
   <div id="error" class="error" style="display:none;"></div>
 
@@ -276,7 +248,6 @@
     const statusEl = document.getElementById("status");
     const errorEl = document.getElementById("error");
     const resultBody = document.getElementById("resultBody");
-    const partyStatsEl = document.getElementById("partyStats");
 
     let currentRows = []; // { name, partyName, partyCategory, votes }
     let currentSort = { key: "votes", direction: "desc" };
@@ -420,58 +391,6 @@
 
       partyFilterSelect.disabled = false;
       currentPartyFilter = "ALL";
-    }
-
-    // Nauja funkcija: partijų procentų skaičiavimas
-    function updatePartyStats(selectedMember) {
-      partyStatsEl.innerHTML = "";
-
-      if (!selectedMember || !currentRows.length) {
-        return;
-      }
-
-      let totalVotes = 0;
-      const byParty = {};
-
-      currentRows.forEach(row => {
-        if (!row.partyCategory || !row.votes) return;
-        totalVotes += row.votes;
-        byParty[row.partyCategory] = (byParty[row.partyCategory] || 0) + row.votes;
-      });
-
-      if (!totalVotes) return;
-
-      const entries = Object.entries(byParty).sort((a, b) => b[1] - a[1]);
-
-      const container = document.createElement("div");
-      const title = document.createElement("div");
-      title.className = "party-stats-title";
-      title.textContent = "Pagal balsavimo panašumą, pasirinktą narį labiausiai priartina šių politinių jėgų balsavimai:";
-      container.appendChild(title);
-
-      const list = document.createElement("div");
-      list.className = "party-stats-list";
-
-      entries.forEach(([category, votes]) => {
-        const percent = (votes * 100) / totalVotes;
-        const item = document.createElement("div");
-        item.className = "party-stats-item";
-
-        const badge = document.createElement("span");
-        badge.className = "party-badge";
-        badge.style.backgroundColor = getPartyColor(category);
-        badge.textContent = category;
-
-        const text = document.createElement("span");
-        text.textContent = "– " + percent.toFixed(1).replace(".", ",") + "%";
-
-        item.appendChild(badge);
-        item.appendChild(text);
-        list.appendChild(item);
-      });
-
-      container.appendChild(list);
-      partyStatsEl.appendChild(container);
     }
 
     function renderRows() {
@@ -651,7 +570,6 @@
           ? "Šiam nariui nerasta sutapimų."
           : "Pasirink nario vardą ir pavardę.";
         currentRows = [];
-        updatePartyStats(null);
         renderRows();
         return;
       }
@@ -671,7 +589,6 @@
       statusEl.textContent =
         "Rodomi nariai, su kuriais „" + selected + "“ dažniausiai balsavo vienodai (nuo didžiausio iki mažiausio vienodų balsavimų skaičiaus).";
 
-      updatePartyStats(selected);
       renderRows();
     });
 
